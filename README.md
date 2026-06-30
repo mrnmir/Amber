@@ -6,7 +6,6 @@
   </picture>
 </p>
 
-<h1 align="center">AMBER</h1>
 
 <p align="center">
   <strong>6G Ambient IoT Simulator</strong>
