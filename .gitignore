@@ -427,3 +427,18 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Python packaging / build artifacts
+*.egg-info/
+*.egg
+dist/
+build/

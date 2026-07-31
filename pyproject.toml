@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "amber"
+version = "0.1.0"
+description = "A Python-based discrete-event simulator for 6G Ambient IoT Networks"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+authors = [{ name = "Mirana Manafova", email = "mirana.manafova@angstrom.uu.se" }]
+dependencies = [
+    "matplotlib>=3.10.8",
+    "numpy>=2.4.3",
+    "pandas>=3.0.1",
+    "simpy>=4.1.1",
+    "openpyxl>=3.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/mrnmir/Amber"
+
+[tool.setuptools]
+packages = ["amber"]
