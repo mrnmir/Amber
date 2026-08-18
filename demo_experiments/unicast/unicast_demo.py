@@ -35,7 +35,7 @@ RX_DURATION_MS = 10
 
 
 node0 = radiodevices.Node(id=0, x=0, y=20, height=1.5, sensitivity_dbm=-100, efficiency=0.7)
-node1 = radiodevices.Node(id=1, x=0, y=40, height=1.5, sensitivity_dbm=-100, efficiency=0.7)
+node1 = radiodevices.Node(id=1, x=0, y=30, height=1.5, sensitivity_dbm=-100, efficiency=0.7)
 node2 = radiodevices.Node(id=2, x=0, y=100, height=1.5, sensitivity_dbm=-100, efficiency=0.7)
 
 bs = radiodevices.BaseStation(
@@ -62,7 +62,7 @@ bs = radiodevices.BaseStation(
         ),
         radiodevices.Sector(
             azimuth_deg=240,
-            beamwidth_deg=65,
+            beamwidth_deg=30,
             power=46,
             antenna_gain_dbi=15,
             sensitivity_dbm=-100,

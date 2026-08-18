@@ -7,7 +7,7 @@ name = "amber"
 version = "0.1.0"
 description = "A Python-based discrete-event simulator for 6G Ambient IoT Networks"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 license = "BSD-3-Clause"
 license-files = ["LICENSE"]
 authors = [{ name = "Mirana Manafova", email = "mirana.manafova@angstrom.uu.se" }]

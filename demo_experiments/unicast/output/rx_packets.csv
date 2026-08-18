@@ -10,7 +10,9 @@ bs_id,time_ms,node_id,rssi_dbm,expected_node,collided,matched,subcarrier_shift
 0,2960,2,-68.68949002835542,any,False,True,0
 0,3005,2,-68.68949002835542,any,False,True,0
 0,3380,0,-45.708420037987366,any,False,True,0
+0,3395,1,-49.74080892192356,any,False,True,0
 0,3425,0,-45.708420037987366,any,False,True,0
+0,3440,1,-49.74080892192356,any,False,True,0
 0,3590,2,-68.68949002835542,any,False,True,0
 0,3635,2,-68.68949002835542,any,False,True,0
 0,4130,2,-68.68949002835542,any,False,True,0
@@ -21,6 +23,8 @@ bs_id,time_ms,node_id,rssi_dbm,expected_node,collided,matched,subcarrier_shift
 0,4850,2,-68.68949002835542,any,False,True,0
 0,4910,0,-45.708420037987366,any,False,True,0
 0,4955,0,-45.708420037987366,any,False,True,0
+0,5195,1,-49.74080892192356,any,False,True,0
+0,5240,1,-49.74080892192356,any,False,True,0
 0,5435,2,-68.68949002835542,any,False,True,0
 0,5480,2,-68.68949002835542,any,False,True,0
 0,5675,0,-45.708420037987366,any,False,True,0
@@ -31,6 +35,8 @@ bs_id,time_ms,node_id,rssi_dbm,expected_node,collided,matched,subcarrier_shift
 0,6485,0,-45.708420037987366,any,False,True,0
 0,6785,2,-68.68949002835542,any,False,True,0
 0,6830,2,-68.68949002835542,any,False,True,0
+0,6995,1,-49.74080892192356,any,False,True,0
+0,7040,1,-49.74080892192356,any,False,True,0
 0,7205,0,-45.708420037987366,any,False,True,0
 0,7250,0,-45.708420037987366,any,False,True,0
 0,7325,2,-68.68949002835542,any,False,True,0
@@ -43,6 +49,8 @@ bs_id,time_ms,node_id,rssi_dbm,expected_node,collided,matched,subcarrier_shift
 0,8735,0,-45.708420037987366,any,False,True,0
 0,8765,2,-68.68949002835542,any,False,True,0
 0,8780,0,-45.708420037987366,any,False,True,0
+0,8795,1,-49.74080892192356,any,False,True,0
+0,8840,1,-49.74080892192356,any,False,True,0
 0,9395,2,-68.68949002835542,any,False,True,0
 0,9440,2,-68.68949002835542,any,False,True,0
 0,9500,0,-45.708420037987366,any,False,True,0
@@ -52,7 +60,9 @@ bs_id,time_ms,node_id,rssi_dbm,expected_node,collided,matched,subcarrier_shift
 0,10265,0,-45.708420037987366,any,False,True,0
 0,10310,0,-45.708420037987366,any,False,True,0
 0,10565,2,-68.68949002835542,any,False,True,0
+0,10595,1,-49.74080892192356,any,False,True,0
 0,10610,2,-68.68949002835542,any,False,True,0
+0,10640,1,-49.74080892192356,any,False,True,0
 0,11030,0,-45.708420037987366,any,False,True,0
 0,11075,0,-45.708420037987366,any,False,True,0
 0,11285,2,-68.68949002835542,any,False,True,0
@@ -61,6 +71,8 @@ bs_id,time_ms,node_id,rssi_dbm,expected_node,collided,matched,subcarrier_shift
 0,11840,0,-45.708420037987366,any,False,True,0
 0,12050,2,-68.68949002835542,any,False,True,0
 0,12095,2,-68.68949002835542,any,False,True,0
+0,12395,1,-49.74080892192356,any,False,True,0
+0,12440,1,-49.74080892192356,any,False,True,0
 0,12560,0,-45.708420037987366,any,False,True,0
 0,12605,0,-45.708420037987366,any,False,True,0
 0,12680,2,-68.68949002835542,any,False,True,0
@@ -73,6 +85,8 @@ bs_id,time_ms,node_id,rssi_dbm,expected_node,collided,matched,subcarrier_shift
 0,14075,2,-68.68949002835542,any,False,True,0
 0,14090,0,-45.708420037987366,any,False,True,0
 0,14135,0,-45.708420037987366,any,False,True,0
+0,14195,1,-49.74080892192356,any,False,True,0
+0,14240,1,-49.74080892192356,any,False,True,0
 0,14615,2,-68.68949002835542,any,False,True,0
 0,14660,2,-68.68949002835542,any,False,True,0
 0,14855,0,-45.708420037987366,any,False,True,0
@@ -83,6 +97,8 @@ bs_id,time_ms,node_id,rssi_dbm,expected_node,collided,matched,subcarrier_shift
 0,15665,0,-45.708420037987366,any,False,True,0
 0,15920,2,-68.68949002835542,any,False,True,0
 0,15965,2,-68.68949002835542,any,False,True,0
+0,15995,1,-49.74080892192356,any,False,True,0
+0,16040,1,-49.74080892192356,any,False,True,0
 0,16385,0,-45.708420037987366,any,False,True,0
 0,16430,0,-45.708420037987366,any,False,True,0
 0,16505,2,-68.68949002835542,any,False,True,0
@@ -91,6 +107,8 @@ bs_id,time_ms,node_id,rssi_dbm,expected_node,collided,matched,subcarrier_shift
 0,17195,0,-45.708420037987366,any,False,True,0
 0,17270,2,-68.68949002835542,any,False,True,0
 0,17315,2,-68.68949002835542,any,False,True,0
+0,17795,1,-49.74080892192356,any,False,True,0
+0,17840,1,-49.74080892192356,any,False,True,0
 0,17915,0,-45.708420037987366,any,False,True,0
 0,17960,0,-45.708420037987366,any,False,True,0
 0,18035,2,-68.68949002835542,any,False,True,0
@@ -103,4 +121,6 @@ bs_id,time_ms,node_id,rssi_dbm,expected_node,collided,matched,subcarrier_shift
 0,19250,2,-68.68949002835542,any,False,True,0
 0,19445,0,-45.708420037987366,any,False,True,0
 0,19490,0,-45.708420037987366,any,False,True,0
+0,19595,1,-49.74080892192356,any,False,True,0
+0,19640,1,-49.74080892192356,any,False,True,0
 0,19970,2,-68.68949002835542,any,False,True,0
