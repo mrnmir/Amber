@@ -1,14 +1,16 @@
+[![docs](https://github.com/mrnmir/Amber/actions/workflows/docs.yml/badge.svg)](https://github.com/mrnmir/Amber/actions/workflows/docs.yml)
+[![license](https://img.shields.io/badge/license-BSD--3--Clause-blue)](LICENSE)
+[![python](https://img.shields.io/badge/python-3.9%2B-blue)](pyproject.toml)
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/logo_white.svg">
   <source media="(prefers-color-scheme: light)" srcset="assets/logo_black.svg">
-  <img src="assets/logo_black.svg" alt="AMBER Logo" width="150" align="left" hspace="20" vspace="14">
+  <img src="assets/logo_black.svg" alt="AMBER Logo" width="120" align="left" hspace="20" vspace="6">
 </picture>
 
 ### 6G Ambient IoT Simulator
 
 A Python-based discrete-event simulator for 6G Ambient IoT Networks.
-
-[![docs](https://github.com/mrnmir/Amber/actions/workflows/docs.yml/badge.svg)](https://github.com/mrnmir/Amber/actions/workflows/docs.yml)
 
 <br clear="left">
 
