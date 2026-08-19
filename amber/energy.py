@@ -11,6 +11,17 @@ class EnvEnergySource:
 
     Each environment step (timeout=1) consumes the next row from
     the input file and updates `self.ext_power`. Loops indefinitely.
+
+    Parameters
+    ----------
+    env : simpy.Environment
+        The simulation environment.
+    file_path : str
+        Path to the Excel file containing the energy trace.
+    column : str
+        Column name to read from (default "V_IM").
+    resistance : float
+        Load resistance in Ohms for P = V^2 / R conversion (default 1.0).
     """
 
     def __init__(
@@ -21,16 +32,7 @@ class EnvEnergySource:
         resistance: float = 1.0,
     ):
         """
-        Parameters
-        ----------
-        env : simpy.Environment
-            The simulation environment.
-        file_path : str
-            Path to the Excel file containing the energy trace.
-        column : str
-            Column name to read from (default "V_IM").
-        resistance : float
-            Load resistance in Ohms for P = V^2 / R conversion (default 1.0).
+
         """
         self.env = env
         self.file_path = file_path

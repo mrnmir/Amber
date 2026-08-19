@@ -33,11 +33,12 @@ TRANSMITTING_CURRENT = 5e-3
 TX_DURATION_MS = 5
 RX_DURATION_MS = 10
 
-
+# Define nodes
 node0 = radiodevices.Node(id=0, x=0, y=20, height=1.5, sensitivity_dbm=-100, efficiency=0.7)
 node1 = radiodevices.Node(id=1, x=0, y=30, height=1.5, sensitivity_dbm=-100, efficiency=0.7)
 node2 = radiodevices.Node(id=2, x=0, y=100, height=1.5, sensitivity_dbm=-100, efficiency=0.7)
 
+# Define a base station with 3 sectors
 bs = radiodevices.BaseStation(
     id=0,
     x=0,
@@ -71,6 +72,7 @@ bs = radiodevices.BaseStation(
     ],
 )
 
+# Controller and Capacitor parameters
 controller_parameters = controller.ControllerParams(
     currents=controller.CurrentsA(
         listening=LISTENING_CURRENT,
@@ -97,6 +99,7 @@ capacitor_params = capacitor.CapacitorParams(
     C=CAPACITANCE,
 )
 
+# Unicast schedule: one TX command addressed to each node, each followed by an RX slot
 unicast_schedule = [
     ("tx", TX_DURATION_MS, "cmd", {"target": 0, "cmd": "send_data"}),
     ("rx", RX_DURATION_MS, "listen"),
@@ -114,8 +117,10 @@ def run_simulation():
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+    # Set up the SimPy environment
     env = simpy.Environment()
 
+    # Set up the energy source that reads from the solar trace Excel file
     energy_source = energy.EnvEnergySource(
         env=env,
         file_path=SOLAR_TRACE,
@@ -123,10 +128,12 @@ def run_simulation():
         resistance=R_SERIES,
     )
 
+    # Define nodes and categorize them as WPT or Hybrid
     wpt_nodes = [node0, node1]
     hybrid_nodes = [node2]
     all_nodes = wpt_nodes + hybrid_nodes
 
+    # Set up coverage maps for WPT and Hybrid nodes
     cov_wpt = propagation.CoverageMap(
         base_stations=[bs],
         nodes=all_nodes,
@@ -149,12 +156,14 @@ def run_simulation():
         combine_mode="max",
     )
 
+    # Compute coverage maps for WPT and Hybrid nodes
     xmin = min(n.x for n in all_nodes) - 200
     xmax = max(n.x for n in all_nodes) + 200
     ymin = min(n.y for n in all_nodes) - 200
     ymax = max(n.y for n in all_nodes) + 200
     cov_wpt.compute_coverage_map(xmin, xmax, ymin, ymax, step_m=1.0)
 
+    # Compute downlink and uplink results for WPT and Hybrid nodes
     dl_wpt = cov_wpt.compute_bs_to_point(wpt_nodes)
     cov_wpt.calculate_node_power(wpt_nodes, dl_wpt)
     ul_wpt = cov_wpt.compute_point_to_bs(wpt_nodes)
@@ -173,6 +182,7 @@ def run_simulation():
         (node2, dl_hybrid, ul_hybrid, cov_hybrid),
     ]
 
+    # Set up Capacitor, BackscatterModule, and Controller for each node
     for node, dl, ul, cov in per_node_setup:
         cap = capacitor.Capacitor(
             env=env, id=node.id, params=capacitor_params, initial_voltage=0.0
@@ -216,6 +226,7 @@ def run_simulation():
     env.run(until=SIM_TIME_MS)
     print("Simulation complete!")
 
+    # Compute results
     total_sent = sum(bsm.packets_sent for bsm in backscatter_modules)
     decoded = set()
     for pkt in bs_behavior.rx_packets:
@@ -255,7 +266,7 @@ def run_simulation():
         "total_received": total_received,
     }
 
-
+# Save results to CSV files for later analysis
 def save_packets(bs_behavior, backscatter_modules):
     rx_data = []
     for pkt in bs_behavior.rx_packets:
@@ -287,7 +298,7 @@ def save_packets(bs_behavior, backscatter_modules):
     df_tx.to_csv(os.path.join(OUTPUT_DIR, "tx_records.csv"), index=False)
     print(f"Saved {len(df_tx)} transmissions to tx_records.csv")
 
-
+# Plot results: coverage map, capacitor voltages, DER, throughput, and per-node outcomes
 def plot_results(sim):
     coverage_map = sim["coverage_map"]
     capacitors = sim["capacitors"]

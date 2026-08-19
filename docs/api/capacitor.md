@@ -1,0 +1,3 @@
+# capacitor
+
+::: amber.capacitor

@@ -5,6 +5,7 @@ from typing import List, Optional, Literal
 
 @dataclass
 class Node:
+    """Node object for representing a node in the simulation."""    
     id: int
     x: float
     y: float
@@ -25,6 +26,7 @@ class Node:
 
 @dataclass
 class Sector:
+    """Sector object for representing a sector within a base station."""
     azimuth_deg: float
     beamwidth_deg: float
     facecolor: str = "C1"
@@ -39,6 +41,7 @@ class Sector:
 
 @dataclass
 class BaseStation:
+    """BaseStation object for representing a base station with multiple sectors."""
     id: int
     x: float
     y: float

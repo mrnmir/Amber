@@ -48,9 +48,11 @@ class Controller:
     """
     Orchestrates a node's duty cycle based on the capacitor's voltage:
       listening -> sensing -> processing -> transmitting -> (loop back to listening)
+    
     Goes idle (off, charging) when voltage drops below low threshold.
 
     Expects:
+    
       - capacitor_ctrl: has .action, .current (A), .voltage_source (V), .voltage (V),
                         .internal_time (s), and responds to interrupts:
                         'capacitor_discharge', 'capacitor_charging', 'capacitor_full'

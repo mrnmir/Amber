@@ -1,19 +1,16 @@
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/logo_white.svg">
-    <source media="(prefers-color-scheme: light)" srcset="assets/logo_black.svg">
-    <img src="assets/logo_black.svg" alt="AMBER Logo" width="280">
-  </picture>
-</p>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/logo_white.svg">
+  <source media="(prefers-color-scheme: light)" srcset="assets/logo_black.svg">
+  <img src="assets/logo_black.svg" alt="AMBER Logo" width="150" align="left" hspace="20" vspace="14">
+</picture>
 
+### 6G Ambient IoT Simulator
 
-<p align="center">
-  <strong>6G Ambient IoT Simulator</strong>
-</p>
+A Python-based discrete-event simulator for 6G Ambient IoT Networks.
 
-<p align="center">
-  A Python-based discrete-event simulator for 6G Ambient IoT Networks.
-</p>
+[![docs](https://github.com/mrnmir/Amber/actions/workflows/docs.yml/badge.svg)](https://github.com/mrnmir/Amber/actions/workflows/docs.yml)
+
+<br clear="left">
 
 ---
 
@@ -67,6 +64,9 @@ Each prints a summary and writes `rx_packets.csv` and `tx_records.csv` to its
 | `backscatter` | Node-side backscatter transmit/receive |
 | `bsengine` | Base station behaviour, downlink scheduling |
 | `packet_analysis` | Collision detection, SIC, throughput and DER statistics |
+
+Full API reference, generated from the source docstrings, is at
+**[mrnmir.github.io/Amber](https://mrnmir.github.io/Amber/)**.
 
 ## License
 

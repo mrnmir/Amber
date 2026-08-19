@@ -53,14 +53,19 @@ SEED = 7
 # ===============
 class AdaptiveAlohaNode(backscatter.BackscatterModule):
 
+    # Called by receive_command() after the framework has applied the sensitivity
+    # gate and stored the frame the BS advertised into self.rx_slots.
     def handle_command(self, cmd, bs_id, data):
         if cmd == "collect":
+            # Pick one slot uniformly at random from the advertised frame;
+            # -1 means no frame was advertised, so the node stays silent.
             self.chosen_slot_idx = (
                 random.randint(0, len(self.rx_slots) - 1) if self.rx_slots else -1
             )
             self.state = "active"
             self.last_tx_command_time = self.env.now
 
+    # Called when the node's chosen slot comes up; returning None transmits nothing.
     def build_tx_payload(self, sensor_data):
         if self.state == "active":
             return {"type": "data", "payload": sensor_data}
@@ -70,33 +75,45 @@ class AdaptiveAlohaNode(backscatter.BackscatterModule):
 # ===============
 # BS HALF
 # ===============
+# Generator yielding one frame at a time. It must stay lazy: each frame is
+# decided only after the previous one has finished, which is what makes the
+# protocol adaptive.
 def adaptive_aloha_policy(bs):
     n_slots = START_SLOTS
-    prev_collided = 0
+    prev_collided = 0              # bs.total_collided is cumulative, so keep the previous value to difference it
     frame = 0
-    load_ema = 0.0                 # smoothed estimate of contending nodes / frame for not ot chase noise
+    load_ema = 0.0                 # smoothed estimate of contending nodes / frame, so as not to chase noise
     bs.adapt_history = []
 
     while True:
+        # One frame = a broadcast "collect" command plus n_slots reply slots.
+        # Both go in the SAME yielded frame so the engine's lookahead can
+        # advertise those slots to the nodes in the command itself.
         yield [("tx", 5, "collect", {"cmd": "collect", "target": -1})] + \
               [("rx", 8, "slot") for _ in range(n_slots)]
 
-        heard = len(bs.decoded_this_frame)
-        collided = bs.total_collided - prev_collided
+        # Resumes here only once the whole frame has played out.
+        heard = len(bs.decoded_this_frame)              # replies decoded cleanly this frame
+        collided = bs.total_collided - prev_collided    # replies lost to collisions this frame
         prev_collided = bs.total_collided
         frame += 1
         bs.adapt_history.append((bs.env.now / 1000.0, n_slots, heard, collided))
         print(f"  frame {frame:>3}: slots={n_slots:>2}  decoded={heard:>2}  collided={collided:>2}")
 
+        # Each transmission increments exactly one of the two counters, so the
+        # sum is how many nodes actually contended this frame.
         contenders = heard + collided
         load_ema = 0.75 * load_ema + 0.25 * contenders
+        # Aim for roughly two slots per contender, clamped to [MIN_SLOTS, MAX_SLOTS].
         target = min(MAX_SLOTS, max(MIN_SLOTS, round(load_ema * 2)))
+        # Move one slot per frame, with a one-slot deadband above target so the
+        # frame size settles instead of oscillating around it.
         if n_slots < target:
             n_slots += 1
         elif n_slots > target + 1:
             n_slots -= 1
 
-
+# Put randomly placed nodes in a circle around the BS, with random radius and angle.
 def build_nodes():
     nodes = []
     for i in range(N_NODES):
@@ -107,7 +124,7 @@ def build_nodes():
             height=1.5, sensitivity_dbm=-100, efficiency=0.7))
     return nodes
 
-
+# Define a base station with three sectors, each 120 degrees apart, using 3GPP antenna model.
 def make_bs():
     return radiodevices.BaseStation(
         id=0, x=0, y=0, site_radius=2,
@@ -115,7 +132,7 @@ def make_bs():
                                      antenna_gain_dbi=15, sensitivity_dbm=-100, height=25)
                  for a in (0, 120, 240)])
 
-
+# Define controller and capacitor parameters
 CONTROLLER_PARAMS = controller.ControllerParams(
     currents=controller.CurrentsA(listening=1.4e-4, sensing=0.512e-3,
                                   processing=1.28e-3, transmitting=5e-3),
@@ -141,16 +158,19 @@ def run_simulation():
     nodes = build_nodes()
     bs = make_bs()
 
+    # Set up coverage map for all nodes, using the external energy source to determine node power
     cov = propagation.CoverageMap(
         base_stations=[bs], nodes=nodes, freq_hz=FREQ_HZ, pathloss_model=PATHLOSS,
         los=True, node_energy_mode="hybrid",
         node_ext_power_fn=lambda node: energy_source.ext_power, combine_mode="max")
     cov.compute_coverage_map(-120, 120, -120, 120, step_m=2.0)
 
+    # Compute downlink and uplink results for all nodes
     dl = cov.compute_bs_to_point(nodes)
     cov.calculate_node_power(nodes, dl)
     ul = cov.compute_point_to_bs(nodes)
 
+    # Set up Capacitor, BackscatterModule, and Controller for each node
     capacitors, backscatter_modules = [], []
     for node in nodes:
         cap = capacitor.Capacitor(env=env, id=node.id, params=CAP_PARAMS, initial_voltage=0.0)
@@ -171,6 +191,7 @@ def run_simulation():
     print(f"Running {SIM_TIME_MS/1000:.1f} s, {N_NODES} nodes, frame {MIN_SLOTS}..{MAX_SLOTS} slots")
     env.run(until=SIM_TIME_MS)
 
+    # Compute results
     hist = bs_behavior.adapt_history
     frames = len(hist)
     final_slots = hist[-1][1] if hist else 0
@@ -186,7 +207,7 @@ def run_simulation():
     save_packets(bs_behavior, backscatter_modules)
     return {"bs": bs_behavior, "caps": capacitors, "bsms": backscatter_modules, "cov": cov}
 
-
+# Save results to CSV files for later analysis
 def save_packets(bs_behavior, backscatter_modules):
     import pandas as pd
     rx = [{"time_ms": p.start_ms, "node_id": p.node_id, "rssi_dbm": p.rssi_dbm,
@@ -205,7 +226,7 @@ def save_packets(bs_behavior, backscatter_modules):
             os.path.join(OUTPUT_DIR, "adaptation.csv"), index=False)
     print(f"  saved rx/tx/adaptation CSVs to {OUTPUT_DIR}")
 
-
+# Plot results
 def plot_results(sim):
     import numpy as np
     import pandas as pd

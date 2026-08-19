@@ -50,6 +50,7 @@ class BSBehavior:
     for WPT. Nodes harvest energy all the time. The schedule only handles communication.
 
     Schedule entries (mode, duration_ms, slot_id, payload):
+
     - ("rx", 10, "listen"): Listen for any packets for 10ms
     - ("rx", 10, "poll_0", {"expect": 0}): Listen, expecting node 0
     - ("tx", 5, "cmd", {"target": -1, "cmd": "send_id"}): Broadcast send_id to all

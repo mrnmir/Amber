@@ -84,11 +84,12 @@ def apply_sic(
     """Apply Successive Interference Cancellation (SIC) algorithm.
 
     SIC Algorithm:
-    1. Sort packets by power (strongest first)
-    2. Try to decode strongest packet (check SINR >= threshold)
-    3. If successful, subtract signal (with imperfect cancellation)
-    4. Re-calculate SINR for remaining packets
-    5. Repeat until no more packets can be decoded
+
+    - Sort packets by power (strongest first)
+    - Try to decode strongest packet (check SINR >= threshold)
+    - If successful, subtract signal (with imperfect cancellation)
+    - Re-calculate SINR for remaining packets
+    - Repeat until no more packets can be decoded
 
     Parameters
     ----------
@@ -173,10 +174,11 @@ def detect_collisions(
     Packets on same subcarrier with time overlap -> check SINR for decode.
 
     Uses SIC (Successive Interference Cancellation) algorithm:
-    1. Sort packets by power (strongest first)
-    2. Try to decode strongest (SINR >= threshold)
-    3. If successful, subtract signal and repeat for next strongest
-    4. Continue until no more packets can be decoded
+
+    - Sort packets by power (strongest first)
+    - Try to decode strongest (SINR >= threshold)
+    - If successful, subtract signal and repeat for next strongest
+    - Continue until no more packets can be decoded
 
 
     Parameters
@@ -293,7 +295,8 @@ def _analyze_collision_outcome(
     SIC includes capture effect as a special case (when only strongest is decoded).
     SINR is computed dynamically based on actual colliding packets.
 
-    Args:
+    Parameters
+    ----------
         bs_id: Base station ID
         subcarrier: Subcarrier index
         node_ids: List of node IDs involved in collision
@@ -305,7 +308,8 @@ def _analyze_collision_outcome(
         noise_w: Thermal noise power in watts
         cancellation_factor: SIC cancellation efficiency (0.9 = 90%)
 
-    Returns:
+    Returns
+    -------
         Tuple of (CollisionEvent, {packet_idx: outcome})
     """
     now_str = datetime.now().isoformat(timespec="seconds")
@@ -391,25 +395,40 @@ def analyze_packets(
         sector_idx, expected_node, matched, subcarrier_shift, collided, bs_id
 
     Uses SIC (Successive Interference Cancellation) for collision resolution:
+
     - SINR is computed dynamically based on actual colliding packets
     - Capture effect is a special case of SIC (only strongest decoded)
     - Multiple packets can be decoded if power differences allow
 
-    Args:
-        data_path: Path to BSEngine rx log file
-        num_bs: Number of base stations
-        num_nodes: Number of nodes
-        packet_sent: Packets sent per node
-        packet_received: Packets received per node
-        required_sinr_db: Minimum SINR for successful decode
-        enable_sic: Enable successive interference cancellation
-        noise_figure_db: Receiver noise figure
-        bandwidth_hz: System bandwidth
-        write_collision_log: Path for collision log file
-        write_terminal_log: Path for terminal log file
+    Parameters
+    ----------
+    data_path : str
+        Path to BSEngine rx log file.
+    num_bs : int
+        Number of base stations.
+    num_nodes : int
+        Number of nodes.
+    packet_sent : Iterable[int]
+        Packets sent per node.
+    packet_received : Iterable[int]
+        Packets received per node.
+    required_sinr_db : float
+        Minimum SINR for successful decode.
+    enable_sic : bool
+        Enable successive interference cancellation.
+    noise_figure_db : float
+        Receiver noise figure.
+    bandwidth_hz : float
+        System bandwidth.
+    write_collision_log : str, optional
+        Path for collision log file.
+    write_terminal_log : str, optional
+        Path for terminal log file.
 
-    Returns:
-        PacketAnalysisResult with per-BS and per-node statistics
+    Returns
+    -------
+    PacketAnalysisResult
+        Per-BS and per-node statistics.
     """
     noise_w = thermal_noise_watts(bandwidth_hz, noise_figure_db)
 

@@ -444,3 +444,6 @@ env/
 *.egg
 dist/
 build/
+
+# MkDocs build output (published to the gh-pages branch, not committed here)
+site/

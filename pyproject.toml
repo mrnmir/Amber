@@ -19,6 +19,14 @@ dependencies = [
     "openpyxl>=3.0",
 ]
 
+[project.optional-dependencies]
+docs = [
+    "mkdocs>=1.5",
+    "mkdocs-material>=9.5",
+    "mkdocstrings[python]>=0.24",
+    "ruff>=0.4",
+]
+
 [project.urls]
 Homepage = "https://github.com/mrnmir/Amber"
 

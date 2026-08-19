@@ -27,9 +27,10 @@ class BackscatterModule:
     """Backscatter communication module with protocol logic.
 
     Protocol:
-    1. Node receives "send_id" from BS → transmit ID in random slot
-    2. If ACK received → transition to registered state
-    3. On "send_data" → transmit sensor data (registered nodes only)
+
+    - Node receives "send_id" from BS → transmit ID in random slot
+    - If ACK received → transition to registered state
+    - On "send_data" → transmit sensor data (registered nodes only)
 
     Works with Controller - Controller handles energy/timing,
     BackscatterModule handles protocol.
@@ -190,10 +191,10 @@ class BackscatterModule:
         Returns what to transmit, or None if not ready.
 
         Checks:
-        1. Node must have received a recent TX command
-        2. Node must be in wait_ack or registered state
-        3. Current time must be within the chosen RX slot window
-        4. Slot must have been assigned after last command (not stale)
+        
+        - Node must have received a recent TX command
+        - Current time must be within the chosen RX slot window
+        - Slot must have been assigned after last command (not stale)
 
         Parameters
         ----------
