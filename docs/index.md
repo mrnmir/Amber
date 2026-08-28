@@ -1,4 +1,8 @@
-# AMBER
+---
+title: 6G Ambient IoT Simulator
+---
+
+# AMBER — 6G Ambient IoT Simulator
 
 A Python-based discrete-event simulator for 6G Ambient IoT Networks.
 
