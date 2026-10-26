@@ -1,7 +1,8 @@
 # simulator/models/controller.py
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import List, Tuple
+import math
 import random
 import simpy
 
@@ -21,10 +22,10 @@ class CurrentsA:
 
 @dataclass(frozen=True)
 class DurationsMs:
-    listening: int
-    sensing: int
-    processing: int
-    transmitting: int
+    listening: float
+    sensing: float
+    processing: float
+    transmitting: float
 
 
 @dataclass(frozen=True)
@@ -39,6 +40,7 @@ class ControllerParams:
     durations_ms: DurationsMs
     thresholds_v: VoltageThresholdsV
     max_startup_time_ms: int = 2000
+    tick_ms: float = 1.0
 
 
 # ----------------------------
@@ -48,11 +50,9 @@ class Controller:
     """
     Orchestrates a node's duty cycle based on the capacitor's voltage:
       listening -> sensing -> processing -> transmitting -> (loop back to listening)
-    
     Goes idle (off, charging) when voltage drops below low threshold.
 
     Expects:
-    
       - capacitor_ctrl: has .action, .current (A), .voltage_source (V), .voltage (V),
                         .internal_time (s), and responds to interrupts:
                         'capacitor_discharge', 'capacitor_charging', 'capacitor_full'
@@ -69,6 +69,9 @@ class Controller:
         coverage_map=None,
         downlink_results=None,
         keep_logs: bool = True,  # if False, skip per-step diagnostic logging (flat memory)
+        # dB the strongest reader must beat the other readers by before this
+        # tag's envelope detector can still read its query
+        dl_capture_db: float = 10.0,
     ):
         self.env = env
         self.id = node.id
@@ -80,6 +83,9 @@ class Controller:
         self.downlink_results = downlink_results
         self.p = params
         self.keep_logs = keep_logs
+
+        capacitor_ctrl.params = replace(capacitor_ctrl.params,
+                                        dt=params.tick_ms / 1000.0)
 
         # FSM state
         self.state_name = "listening"
@@ -114,6 +120,18 @@ class Controller:
 
         self.fsm_count_in_current_cap_cycle = 0
         self.fsm_counts_per_cap_cycle = []  # list of counts, one per cap cycle
+
+        # DL-collision. The diode rectifies the sum of every field on the
+        # antenna, so a competing reader is not filtered out - its carrier rides
+        # under the wanted reader's OOK and eats the modulation depth. The tag
+        # reads a query only if that reader beats the rest by dl_capture_db;
+        # otherwise it decodes nothing and goes silent, unable to report why.
+        # Sectors of one BS all radiate the same query, so their powers add into
+        # that BS's total. (If sectors ever send different queries, they become
+        # mutual interferers and this grouping no longer holds.)
+        # node.dl_ratio_db is refreshed every tick by calculate_node_power, so
+        # with fading on this is an event, not a fixed property of position.
+        self.dl_capture_db = dl_capture_db
 
         self.action = env.process(self.run())
 
@@ -203,7 +221,8 @@ class Controller:
                 return
 
             # Check if backscatter says we can transmit now
-            if self.backscatter is not None:
+            # (below capture: the query never got through, so nothing to answer)
+            if self.backscatter is not None and self.node.dl_ratio_db >= self.dl_capture_db:
                 tx_info = self.backscatter.controller_tx_ready(self.processed_data)
                 if tx_info is not None:
                     # Deliver at the exact validated in-slot instant (no 1-tick slip).
@@ -250,13 +269,15 @@ class Controller:
             # Recalculate harvesting power for this node every millisecond
             if self.coverage_map is not None and self.downlink_results is not None:
                 self.coverage_map.calculate_node_power(
-                    [self.node], self.downlink_results
+                    [self.node], self.downlink_results, now_ms=float(self.env.now)
                 )
             # else wpt is tatic, no need to recalculate every ms
 
             # Convert power (dBm) to voltage: V = sqrt(P * R)
             power_w = dbm_to_watts(self.node.harvesting_power_dbm)
-            R_series = getattr(self.capacitor_ctrl, "R_series", 5e3)
+            # Capacitor keeps this in .params, so a plain getattr for "R_series"
+            # never finds it and silently pins the conversion at 5 kOhm.
+            R_series = getattr(self.capacitor_ctrl.params, "R_series", 5e3)
             self.capacitor_ctrl.voltage_source = (power_w * R_series) ** 0.5
 
             # handle startup delay: charge during startup delay before becoming active
@@ -290,5 +311,4 @@ class Controller:
                     self.fsm_count_in_current_cap_cycle = 0
                     self.capacitor_ctrl.action.interrupt("capacitor_charging")
 
-            # advance one millisecond
-            yield self.env.timeout(1)
+            yield self.env.timeout(self.p.tick_ms)

@@ -1,7 +1,8 @@
-# amber/backscatter.py
+# simulator/models/backscatter.py
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Optional, Any, Tuple
+import math
 import pandas as pd
 import random
 import simpy
@@ -27,10 +28,9 @@ class BackscatterModule:
     """Backscatter communication module with protocol logic.
 
     Protocol:
-
-    - Node receives "send_id" from BS → transmit ID in random slot
-    - If ACK received → transition to registered state
-    - On "send_data" → transmit sensor data (registered nodes only)
+    1. Node receives "send_id" from BS → transmit ID in random slot
+    2. If ACK received → transition to registered state
+    3. On "send_data" → transmit sensor data (registered nodes only)
 
     Works with Controller - Controller handles energy/timing,
     BackscatterModule handles protocol.
@@ -101,10 +101,16 @@ class BackscatterModule:
         """
         data = data or {}
 
-        # Check if received power is above node sensitivity
+        # Check if received power is above node sensitivity.
+        # best_pw_dbm is the static, position-only power, so the fade has to be
+        # applied here too - otherwise a tag in a deep null still hears every
+        # command and DL-power can never happen. One-way link, so 10*log10(g);
+        # the uplink gets 20*log10(g) because it crosses the channel twice.
         node_sensitivity = getattr(self.node, "sensitivity_dbm", -45.0)
         best_pw_dbm = self.downlink_results.get("best_pw_dbm", {})
-        received_power = best_pw_dbm.get(self.node.id, -999.0)
+        g = getattr(self.node, "fading_gain", 1.0)
+        fade_db = 10.0 * math.log10(g) if g > 0 else -99.0
+        received_power = best_pw_dbm.get(self.node.id, -999.0) + fade_db
         if received_power < node_sensitivity:
             # Signal too weak, ignore command
             return
@@ -191,10 +197,10 @@ class BackscatterModule:
         Returns what to transmit, or None if not ready.
 
         Checks:
-        
-        - Node must have received a recent TX command
-        - Current time must be within the chosen RX slot window
-        - Slot must have been assigned after last command (not stale)
+        1. Node must have received a recent TX command
+        2. Node must be in wait_ack or registered state
+        3. Current time must be within the chosen RX slot window
+        4. Slot must have been assigned after last command (not stale)
 
         Parameters
         ----------
@@ -281,10 +287,15 @@ class BackscatterModule:
             best_sector_name = None
             best_rssi_dbm = -999.0
 
+            # The backscattered wave crosses the same channel twice (reader->tag,
+            # tag->reader), so the reply sees the square of the downlink power
+            # gain - a fade costs the reply twice the dB it costs the harvest.
+            fade_db = 20.0 * math.log10(g) if (g := getattr(self.node, "fading_gain", 1.0)) > 0 else -99.0
+
             for sector_name, node_powers in per_sector.items():
                  if sector_name.startswith(f"BS{bs.id}_"):
                     if self.node.id in node_powers:
-                        rssi = node_powers[self.node.id]
+                        rssi = node_powers[self.node.id] + fade_db
                         if rssi > best_rssi_dbm:
                             best_rssi_dbm = rssi
                             best_sector_name = sector_name

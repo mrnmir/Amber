@@ -1,4 +1,4 @@
-# amber/BSEngine.py
+# /BSEngine.py
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable, Optional, List, Dict, Any, Tuple, Union
@@ -50,7 +50,6 @@ class BSBehavior:
     for WPT. Nodes harvest energy all the time. The schedule only handles communication.
 
     Schedule entries (mode, duration_ms, slot_id, payload):
-
     - ("rx", 10, "listen"): Listen for any packets for 10ms
     - ("rx", 10, "poll_0", {"expect": 0}): Listen, expecting node 0
     - ("tx", 5, "cmd", {"target": -1, "cmd": "send_id"}): Broadcast send_id to all
@@ -462,6 +461,8 @@ class BSBehavior:
             idx = (idx + 1) % schedule_len
             if idx == 0:
                 frame_offset += 1
+                if not self.loop:
+                    break
 
             entry = self.schedule[idx]
             mode = entry[0]

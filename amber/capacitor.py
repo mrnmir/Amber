@@ -1,4 +1,4 @@
-# amber/capacitor.py
+# simulator/models/capacitor.py
 from __future__ import annotations
 import math
 import simpy
@@ -61,13 +61,7 @@ class Capacitor:
 
     # --------------- transitions ------------------
     def capacitor_charging(self) -> float:
-        """Charge toward voltage_source with leakage during one dt step.
-
-        Returns
-        -------
-        float
-            New voltage after one dt step.
-        """        
+        """Charge toward voltage_source with leakage during one dt step."""
         p = self.params
         # explicit-Euler for source coupling + exact leakage decay over dt
         # v_{t+dt} = v_t + dt*( (Vsrc - v_t)/(R_series*C) ) + v_t*(e^{-dt/(R_leak*C)} - 1)
@@ -79,13 +73,7 @@ class Capacitor:
         return self.voltage
 
     def capacitor_selfdischarge(self) -> float:
-        """Leakage-only decay during one dt step.
-
-        Returns
-        -------
-        float
-            New voltage after one dt step.
-        """        
+        """Leakage-only decay during one dt step."""
         p = self.params
         self.voltage *= math.exp(-p.dt / (p.R_leakage * p.C))
         self.voltage = min(max(self.voltage, 0.0), self.voltage_max)
@@ -93,18 +81,10 @@ class Capacitor:
         return self.voltage
 
     def load_discharging(self, current: float) -> float:
-        """Discharge under an external load current for one dt step.
-
-        Parameters
-        ----------
-        current : float
-            Load current to draw from the capacitor.
-
-        Returns
-        -------
-        float
-            New voltage after one dt step.
-        """        
+        """
+        Discharge under an external load current for one dt step,
+        with leakage accounted.
+        """
         p = self.params
         # energy drawn from cap by the load over dt
         energy_consumed = self.voltage * current * p.dt  # (approx) P*dt with P=V*I
@@ -127,18 +107,9 @@ class Capacitor:
         return self.voltage
 
     def charge_and_discharge(self, load_current: float) -> float:
-        """Simultaneous charging from voltage_source and discharging to load during one dt step.
-           Net power model: voltage changes based on (harvesting - consumption).
-
-        Parameters
-        ----------
-        load_current : float
-            Load current to draw from the capacitor.
-
-        Returns
-        -------
-        float
-            New voltage after one dt step.
+        """
+        Simultaneous charging from voltage_source and discharging to load.
+        Net power model: voltage changes based on (harvesting - consumption).
         """
         p = self.params
 
@@ -190,43 +161,15 @@ class Capacitor:
     # convenience API
     # ----------------------------
     def charge_step(self, source_voltage: float):
-        """One dt charging step (imperative helper; optionally call without interrupts).
-
-        Parameters
-        ----------
-        source_voltage : float
-            Voltage of the source to charge the capacitor from.
-
-        Returns
-        -------
-        function
-            Callable function that performs the charging step and returns the new voltage.
-        """        
+        """One dt charging step (imperative helper; optionally call without interrupts)."""
         self.voltage_source = source_voltage
         return self.capacitor_charging()
 
     def discharge_step(self, load_current: float):
-        """One dt load step (imperative helper; optionally call without interrupts).
-
-        Parameters
-        ----------
-        load_current : float
-            Current to draw from the capacitor.
-
-        Returns
-        -------
-        function
-            Callable function that performs the discharging step and returns the new voltage.
-        """        
+        """One dt load step (imperative helper; optionally call without interrupts)."""
         self.current = load_current
         return self.load_discharging(load_current)
 
     def leak_step(self):
-        """One dt leakage-only step (imperative helper; optionally call without interrupts).
-
-        Returns
-        -------
-        function
-            Callable function that performs the leakage step and returns the new voltage.
-        """
+        """One dt leakage-only step."""
         return self.capacitor_selfdischarge()

@@ -1,4 +1,4 @@
-# amber/propagation.py
+# simulator/models/propagation.py
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
@@ -170,7 +170,7 @@ def antenna_from_sector(sec: Sector) -> Any:
     """    
     at = str(getattr(sec, "antenna_type", "3GPP")).lower()
     if at == "omni":
-        return OmniAntenna(gain_dbi=0.0)
+        return OmniAntenna(gain_dbi=float(sec.antenna_gain_dbi))
     elif at in ("3gpp", "3gpp3901", "3gpp_38.901", "3gpp-38.901"):
         return SectorAntenna3GPP(
             boresight_compass_deg=float(sec.azimuth_deg),
@@ -233,6 +233,11 @@ def fspl_lin(distance_m, freq_hz):
     d = np.maximum(distance_m, 1e-3)
     lam = C / freq_hz
     return (lam / (4.0 * np.pi * d)) ** 2
+
+
+def _pce_of(node, received_w: float) -> float:
+    pce = getattr(node, "pce", 1.0)
+    return float(pce(received_w)) if callable(pce) else float(pce)
 
 
 def urban_macro_loss_db_38_901(
@@ -383,8 +388,60 @@ class CoverageMap:
     node_ext_power_fn: Optional[NodeExtPowerFn] = None
     combine_mode: str = "max"
 
+    # small-scale fading (per BS-tag link, correlated in time)
+    fading: bool = False
+    fading_k_db: float = 6.0          # Rician K; higher = milder fades. -inf would be Rayleigh
+    coherence_time_ms: float = 50.0   # how fast the channel drifts
+    fading_seed: int = 0
+
     # internal
     _grid: Optional[Dict[str, np.ndarray]] = field(init=False, default=None, repr=False)
+    _fade_h: Dict[Any, complex] = field(init=False, default_factory=dict, repr=False)
+    _fade_t: Dict[Any, float] = field(init=False, default_factory=dict, repr=False)
+    _fade_rng: Any = field(init=False, default=None, repr=False)
+
+    # ------------------------------------------------------------------
+    # Small-scale fading
+    # ------------------------------------------------------------------
+    def fading_gain(self, node_id: Any, bs_id: Any, now_ms: float) -> float:
+        """Linear power gain of one BS-tag link at time now_ms (mean 1.0).
+
+        A Gauss-Markov (first-order AR) diffuse component drifting with
+        coherence_time_ms, on top of a fixed LOS component set by fading_k_db.
+        Correlated rather than redrawn per interval, so fade durations come out
+        distributed instead of all being exactly one interval long.
+
+        The gain is per link and per tag, so two tags a metre apart fade
+        independently and a tag can drop into a null wherever it sits - fading
+        is what makes an energy outage an event rather than a coordinate.
+        """
+        if not self.fading:
+            return 1.0
+
+        if self._fade_rng is None:
+            self._fade_rng = np.random.default_rng(self.fading_seed)
+
+        key = (node_id, bs_id)
+        h = self._fade_h.get(key)
+        if h is None:
+            # Start from the stationary distribution, not from a fixed value
+            h = complex(*self._fade_rng.normal(0.0, np.sqrt(0.5), 2))
+            self._fade_t[key] = now_ms
+            self._fade_h[key] = h
+
+        dt = now_ms - self._fade_t[key]
+        if dt > 0:
+            rho = float(np.exp(-dt / max(self.coherence_time_ms, 1e-9)))
+            innov = complex(*self._fade_rng.normal(0.0, np.sqrt(0.5), 2))
+            h = rho * h + np.sqrt(max(1.0 - rho * rho, 0.0)) * innov
+            self._fade_h[key] = h
+            self._fade_t[key] = now_ms
+
+        # Rician: fixed LOS phasor + drifting diffuse part, normalised to mean power 1
+        k = 10.0 ** (self.fading_k_db / 10.0)
+        los = np.sqrt(k / (k + 1.0))
+        dif = np.sqrt(1.0 / (k + 1.0))
+        return float(abs(los + dif * h) ** 2)
 
 
     def compute_coverage_map(
@@ -527,6 +584,8 @@ class CoverageMap:
                     tx_gain_lin = ant.gain_linear(aerr)
                     tx_dbm = float(getattr(sec, "power", 43.0))
 
+                    # response = getattr(points[j], "response_model", None)
+
                     p_w = compute_rx_power_watts(
                         tx_power_dbm=tx_dbm,
                         tx_gain_linear=tx_gain_lin,
@@ -550,6 +609,7 @@ class CoverageMap:
                     for j, pid in enumerate(p_ids):
                         per_node_powers[pid][bs_name] = float(pw_dbm_arr[j])
 
+
         best_dbm_arr = watts_to_dbm(best_pw_w)
         total_dbm_arr = watts_to_dbm(total_pw_w)
 
@@ -562,10 +622,49 @@ class CoverageMap:
         }
 
 
+    def _faded_downlink(self, node: Any, downlink_results: Dict, now_ms: Optional[float]):
+        """Downlink power (W) at one node with per-link fading applied.
+
+        Returns (received_w, serving_gain, dl_ratio_db), where serving_gain is
+        the gain of the link the node actually harvests from - stored on the
+        node so the uplink can reuse the same draw - and dl_ratio_db is how far
+        that reader beats the others right now.
+
+        With fading off this returns the cached best_pw_w untouched, so runs
+        behave exactly as they did before.
+        """
+        node_id = getattr(node, "id", None)
+
+        off = {bs.id for bs in (self.base_stations or [])
+               if not getattr(bs, "carrier_on", True)}
+
+        # Sectors of one BS carry the same query, so their powers add
+        per_bs: Dict[int, float] = {}
+        for name, p_dbm in downlink_results.get("per_node_powers", {}).get(node_id, {}).items():
+            bs_id = int(name.split("_")[0][2:])       # "BS2_S1" -> 2
+            if bs_id in off:
+                continue
+            per_bs[bs_id] = per_bs.get(bs_id, 0.0) + dbm_to_watts(p_dbm)
+        if not per_bs:
+            cached = 0.0 if off else downlink_results["best_pw_w"].get(node_id, 0.0)
+            return cached, 1.0, float("inf")
+
+        fade_on = self.fading and now_ms is not None
+        gains = {b: (self.fading_gain(node_id, b, now_ms) if fade_on else 1.0) for b in per_bs}
+        faded = {b: w * gains[b] for b, w in per_bs.items()}
+        best = max(faded, key=faded.get)
+        others = sum(w for b, w in faded.items() if b != best)
+        ratio_db = float(10 * np.log10(faded[best] / others)) if others > 0 else float("inf")
+
+        # Harvest: with fading off keep the cached value so runs are unchanged
+        received_w = faded[best] if fade_on else downlink_results["best_pw_w"].get(node_id, 0.0)
+        return received_w, gains[best], ratio_db
+
     def calculate_node_power(
         self,
         nodes: Optional[Sequence[Any]] = None,
         downlink_results: Optional[Dict] = None,
+        now_ms: Optional[float] = None,
     ) -> None:
         """Calculate the harvesting and backscatter power for each node based on the downlink results and the specified energy mode.
 
@@ -584,13 +683,14 @@ class CoverageMap:
 
         if self.node_energy_mode == "wpt":
             for node in target_nodes:
-                node_id = getattr(node, "id", None)
-                received_w = downlink_results["best_pw_w"].get(node_id, 0.0)
+                received_w, node.fading_gain, node.dl_ratio_db = self._faded_downlink(
+                    node, downlink_results, now_ms)
                 efficiency = getattr(node, "efficiency", 1.0)
                 if node.state != "transmitting":
                     harvested_w = received_w
                 else:
                     harvested_w = received_w * (1 - efficiency)
+                harvested_w *= _pce_of(node, received_w)
                 backscatter_w = received_w * efficiency
 
                 node.harvesting_power_dbm = watts_to_dbm(harvested_w)
@@ -603,21 +703,22 @@ class CoverageMap:
                     node.harvesting_power_dbm = watts_to_dbm(ext_w)
                 else:
                     node.harvesting_power_dbm = watts_to_dbm(0.0)
-                node_id = getattr(node, "id", None)
-                received_w = downlink_results["best_pw_w"].get(node_id, 0.0)
+                received_w, node.fading_gain, node.dl_ratio_db = self._faded_downlink(
+                    node, downlink_results, now_ms)
                 efficiency = getattr(node, "efficiency", 1.0)
                 backscatter_w = received_w * efficiency
                 node.backscatter_power_dbm = watts_to_dbm(backscatter_w)
 
         elif self.node_energy_mode == "hybrid":
             for node in target_nodes:
-                node_id = getattr(node, "id", None)
-                received_w = downlink_results["best_pw_w"].get(node_id, 0.0)
+                received_w, node.fading_gain, node.dl_ratio_db = self._faded_downlink(
+                    node, downlink_results, now_ms)
                 efficiency = getattr(node, "efficiency", 1.0)
                 if node.state != "transmitting":
                     harvested_w = received_w
                 else:
                     harvested_w = received_w * (1 - efficiency)
+                harvested_w *= _pce_of(node, received_w)
                 backscatter_w = received_w * efficiency
 
                 ext_w = self.node_ext_power_fn(node) if self.node_ext_power_fn else 0.0
